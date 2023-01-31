@@ -27,6 +27,11 @@ RUN   apt-key del 7fa2af80
 ADD   https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb .
 RUN   dpkg -i cuda-keyring_1.0-1_all.deb
 
+# Fix from https://github.com/NVIDIA/nvidia-docker/issues/1632#issuecomment-1125739652
+RUN apt-key del 7fa2af80
+RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub
+RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2004/x86_64/7fa2af80.pub
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     zip unzip wget build-essential autoconf autogen gdb \
@@ -83,7 +88,9 @@ ADD   https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64
 RUN   dpkg -i cuda-keyring_1.0-1_all.deb
 
 # Install pytorch
-RUN pip3 install torch==1.9.1+cu111 -f https://download.pytorch.org/whl/torch_stable.html  && \
+# RUN pip3 install torch==1.9.1+cu111 -f https://download.pytorch.org/whl/torch_stable.html  && \
+# Fix from https://docs.nvidia.com/deeplearning/frameworks/install-pytorch-jetson-platform/index.html
+RUN pip3 install --no-cache https://developer.download.nvidia.com/compute/redist/jp/v50/pytorch/torch-1.13.0a0+340c4120.nv22.06-cp38-cp38-linux_aarch64.whl && \
     pip3 install --extra-index-url https://pypi.ngc.nvidia.com regex fire ipywidgets tritonclient[all]
 
 # for debug
