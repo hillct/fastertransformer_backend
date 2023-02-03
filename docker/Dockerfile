@@ -24,13 +24,12 @@ ARG BASE_IMAGE=nvcr.io/nvidia/tritonserver:${TRITON_VERSION}-py3
 FROM ${BASE_IMAGE} as server-builder
 
 RUN   apt-key del 7fa2af80
-ADD   https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb .
+ADD   https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/arm64/cuda-keyring_1.0-1_all.deb .
 RUN   dpkg -i cuda-keyring_1.0-1_all.deb
 
 # Fix from https://github.com/NVIDIA/nvidia-docker/issues/1632#issuecomment-1125739652
-RUN apt-key del 7fa2af80
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2004/x86_64/7fa2af80.pub
+RUN apt-key del 7fa2af80 && apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/arm64/3bf863cc.pub
+# RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2004/x86_64/7fa2af80.pub
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -84,31 +83,35 @@ ENV WORKSPACE /workspace
 WORKDIR /workspace
 
 RUN   apt-key del 7fa2af80
-ADD   https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb .
+ADD   https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/arm64/cuda-keyring_1.0-1_all.deb .
 RUN   dpkg -i cuda-keyring_1.0-1_all.deb
 
 # Fix from https://github.com/NVIDIA/nvidia-docker/issues/1632#issuecomment-1125739652
-RUN apt-key del 7fa2af80
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/3bf863cc.pub
-RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2004/x86_64/7fa2af80.pub
+RUN apt-key del 7fa2af80 && apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/arm64/3bf863cc.pub
+# RUN apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu2004/x86_64/7fa2af80.pub
+
+# Downgrade to CUDA 11.8 for Orin NVidia Driver v510 compatibility - Mayb need to downgrade above in builder image too
+RUN apt-get update -q && apt-get install -y cuda-toolkit-11-8 cuda-tools-11-8 cuda-cupti-11-8 libopenblas-dev cargo
 
 # Install pytorch
 # RUN pip3 install torch==1.9.1+cu111 -f https://download.pytorch.org/whl/torch_stable.html  && \
 # Fix from https://docs.nvidia.com/deeplearning/frameworks/install-pytorch-jetson-platform/index.html
-RUN pip3 install --no-cache https://developer.download.nvidia.com/compute/redist/jp/v50/pytorch/torch-1.13.0a0+340c4120.nv22.06-cp38-cp38-linux_aarch64.whl && \
-    pip3 install --extra-index-url https://pypi.ngc.nvidia.com regex fire ipywidgets tritonclient[all]
+
+#    pip3 install --no-cache https://developer.download.nvidia.com/compute/redist/jp/v50/pytorch/torch-1.13.0a0+340c4120.nv22.06-cp38-cp38-linux_aarch64.whl && \
+RUN pip3 install --upgrade pip && \
+    pip3 install -f torch==1.9.1+cu111 torchvision && \
+    pip3 install --extra-index-url https://pypi.ngc.nvidia.com regex fire ipywidgets tritonclient[all] && \
+    pip3 install jupyterlab
 
 # for debug
 RUN apt-get update -q && \
-    apt-get install -y --no-install-recommends openssh-server zsh tmux mosh locales-all clangd sudo cmake xz-utils zstd libz-dev git-lfs&& \
+    apt-get install -y --no-install-recommends openssh-server zsh tmux mosh locales-all clangd sudo cmake xz-utils zstd libz-dev git-lfs && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN sed -i 's/#X11UseLocalhost yes/X11UseLocalhost no/g' /etc/ssh/sshd_config
-RUN mkdir /var/run/sshd -p
+RUN sed -i 's/#X11UseLocalhost yes/X11UseLocalhost no/g' /etc/ssh/sshd_config && mkdir /var/run/sshd -p
 
 # temporal changes only for the blogpost about GPT-J and T5
 RUN ln -sf /usr/bin/python3.8 /usr/bin/python
 
 ADD . /workspace/fastertransformer_backend
-
