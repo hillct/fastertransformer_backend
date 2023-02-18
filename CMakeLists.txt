@@ -110,8 +110,8 @@ if (EXISTS ${FT_DIR})
 else()
   FetchContent_Declare(
     repo-ft
-    GIT_REPOSITORY https://github.com/NVIDIA/FasterTransformer.git 
-    GIT_TAG v5.3
+    GIT_REPOSITORY https://github.com/hillct/FasterTransformer.git 
+    GIT_TAG v5.3-hillct
     GIT_SHALLOW ON
   )
 endif()
@@ -222,6 +222,8 @@ target_link_libraries(
     -lcublasLt
     -lcudart
     -lcurand
+    -lmpi_cxx
+    -lmpi
 )
 
 if (BUILD_MULTI_GPU)
